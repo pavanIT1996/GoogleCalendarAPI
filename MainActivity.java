@@ -373,7 +373,7 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
                     start = event.getStart().getDate();
                 }
                 eventStrings.add(
-                        String.format("%s (%s)", event.getSummary(), start));
+                        String.format("%s (%s) test", event.getSummary(), start));
             }
 
             return eventStrings;
