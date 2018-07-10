@@ -37,10 +37,14 @@ import com.google.api.services.calendar.Calendar;
 import com.google.api.services.calendar.CalendarScopes;
 import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.Events;
+import com.google.api.services.calendar.model.FreeBusyRequest;
+import com.google.api.services.calendar.model.FreeBusyRequestItem;
+import com.google.api.services.calendar.model.FreeBusyResponse;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 
 import pub.devrel.easypermissions.AfterPermissionGranted;
@@ -355,6 +359,8 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
             // List the next 10 events from the primary calendar.
             DateTime now = new DateTime(System.currentTimeMillis());
             List<String> eventStrings = new ArrayList<String>();
+            List<String> tests = new ArrayList<String>();
+
             Events events = mService.events().list("primary")
                     .setMaxResults(10)
                     .setTimeMin(now)
@@ -367,6 +373,7 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
 
             for (Event event : items) {
                 DateTime start = event.getStart().getDateTime();
+
                 if (start == null) {
                     // All-day events don't have start times, so just use
                     // the start date.
