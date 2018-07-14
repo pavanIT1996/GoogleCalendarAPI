@@ -16,6 +16,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.text.method.ScrollingMovementMethod;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -33,15 +34,16 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.DateTime;
 import com.google.api.client.util.ExponentialBackOff;
-import com.google.api.services.calendar.Calendar;
 import com.google.api.services.calendar.CalendarScopes;
 import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.Events;
-import com.google.api.services.calendar.model.FreeBusyRequest;
-import com.google.api.services.calendar.model.FreeBusyRequestItem;
-import com.google.api.services.calendar.model.FreeBusyResponse;
+
+
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -53,10 +55,11 @@ import pub.devrel.easypermissions.EasyPermissions;
 public class MainActivity extends Activity implements EasyPermissions.PermissionCallbacks {
 
     GoogleAccountCredential mCredential;
-    private TextView mOutputText;
+    private TextView mOutputText,text2;
     private Button mCallApiButton;
     ProgressDialog mProgress;
 
+    private static final String TAG= "MainActivity";
     static final int REQUEST_ACCOUNT_PICKER = 1000;
     static final int REQUEST_AUTHORIZATION = 1001;
     static final int REQUEST_GOOGLE_PLAY_SERVICES = 1002;
@@ -355,37 +358,261 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
          * @return List of Strings describing returned events.
          * @throws IOException
          */
+
+//
+//        private List<String> getDataFromApi() throws IOException {
+//            // List the next 10 events from the primary calendar.
+//
+//            DateTime now = new DateTime(System.currentTimeMillis());
+//            DateTime after = new DateTime(System.currentTimeMillis()+24 * 60 * 60 * 1000);
+//
+//            List<String> eventStrings = new ArrayList<String>();
+//            List<String> tests = new ArrayList<String>();
+//            String start2="";
+//            String end2="";
+//
+//
+//
+//            Events events = mService.events().list("primary")
+//                    .setMaxResults(10)
+//                    .setTimeMin(now)
+//                    .setTimeMax(after)
+//                    .setOrderBy("startTime")
+//                    .setSingleEvents(true)
+//                    .execute();
+//
+//
+//            List<Event> items = events.getItems();
+//            SimpleDateFormat sdf = new SimpleDateFormat( "HH:mm:ss" );
+//            for (Event event : items) {
+//                DateTime start = event.getStart().getDateTime();
+//                DateTime end = event.getEnd().getDateTime();
+//
+//
+//                if (start == null) {
+//                    // All-day events don't have start times, so just use
+//                    // the start date.
+////                    start = event.getStart().getDate();
+////                    end   = event.getEnd().getDate();
+//
+//                    start = event.getStart().getDate();
+//                    end   = event.getEnd().getDateTime();
+////
+////                    start2 = sdf.format(start);
+////                    end2 = sdf.format(end);
+//                }
+//                eventStrings.add(
+//                        String.format("%s (%s) - (%s)", event.getSummary(), start, end));
+//            }
+//
+//            return eventStrings;
+//        }
+
+
         private List<String> getDataFromApi() throws IOException {
-            // List the next 10 events from the primary calendar.
-            DateTime now = new DateTime(System.currentTimeMillis());
+//             List the next 10 events from the primary calendar.
+
+            DateTime startDate = new DateTime(System.currentTimeMillis());
+            DateTime endDate = new DateTime(System.currentTimeMillis()+24 * 60 * 60 * 1000);
+
+
+
+            Log.v(TAG,"Start Date value: "+startDate .toString());
+            Log.v(TAG,"End Date value: "+endDate.toString());
+
+            Date date = new Date();
+            Date tomorrow = new Date();
+            tomorrow.setTime(tomorrow.getTime() + (1000*3600*24));
+
+            org.joda.time.DateTime startDateJoda= new org.joda.time.DateTime();
+            org.joda.time.DateTime endDateJoda= startDateJoda.plusHours(24);
+
+            // Convert from Joda-Time to old bundled j.u.Date
+            java.util.Date juDateStart = startDateJoda.toDate();
+            java.util.Date juDateEnd = endDateJoda.toDate();
+            Log.v(TAG,"Start Date joda value: "+juDateStart.toString());
+            Log.v(TAG,"End Date joda value: "+juDateEnd.toString());
+
+            // Convert from j.u.Date to Google Date.
+            com.google.api.client.util.DateTime googleDateTimeStart = new com.google.api.client.util.DateTime( juDateStart );
+            com.google.api.client.util.DateTime googleDateTimeEnd = new com.google.api.client.util.DateTime( juDateEnd );
+
+            Log.v(TAG,"Start Date Google value: "+googleDateTimeStart.toString());
+            Log.v(TAG,"End Date Google value: "+googleDateTimeEnd.toString());
+
             List<String> eventStrings = new ArrayList<String>();
             List<String> tests = new ArrayList<String>();
 
+            org.joda.time.DateTime rootStart = startDateJoda;
+            org.joda.time.DateTime rootEnd = endDateJoda;
+
+
             Events events = mService.events().list("primary")
                     .setMaxResults(10)
-                    .setTimeMin(now)
+                    .setTimeMin(googleDateTimeStart)
+                    .setTimeMax(googleDateTimeEnd)
                     .setOrderBy("startTime")
                     .setSingleEvents(true)
                     .execute();
 
 
             List<Event> items = events.getItems();
+            Log.v(TAG,"Items : "+items.toString()+"\n");
+            Log.v(TAG,"Items size : "+items.size());
+            int interval = 1 ; // how big single slot should be (in this case 1 hrs)
 
-            for (Event event : items) {
-                DateTime start = event.getStart().getDateTime();
+            ArrayList<MyEvent> freeSlots = new ArrayList<MyEvent>();
+//            ArrayList<MyEvent> freeSlots = new ArrayList<MyEvent>();
+            for (int index =0;index<items.size();index++) {
+                Event event = items.get(index);
+                Log.v(TAG,"Items Index: "+event.toString()+"\n");
 
-                if (start == null) {
-                    // All-day events don't have start times, so just use
-                    // the start date.
-                    start = event.getStart().getDate();
+                DateTime teststart=event.getStart().getDateTime();
+                DateTime testend=event.getEnd().getDateTime();
+                Log.v(TAG,"Test Start Date value: "+teststart.toString());
+                Log.v(TAG,"Test End Date value: "+testend.toString());
+
+                long milliseconds1 = teststart.getValue();
+                long milliseconds2 = testend.getValue();
+
+                org.joda.time.DateTime eventStartJoda= new org.joda.time.DateTime(milliseconds1);
+                org.joda.time.DateTime eventEndJoda= new org.joda.time.DateTime(milliseconds2);
+
+                Log.v(TAG,"Event Start Date joda value: "+eventStartJoda.toString());
+                Log.v(TAG,"Event Date joda value: "+eventEndJoda.toString());
+
+                Log.v(TAG,"Before if index == 0 && start<end");
+                if ((index == 0) && (startDateJoda.isBefore(eventStartJoda)) ) {
+                    Log.v(TAG,"Before Inside if index == 0 && start<end");
+                    freeSlots.add( new MyEvent(startDateJoda,eventEndJoda) );
+                    Log.v(TAG,"After Inside if index == 0 && start<end");
                 }
+
+                if (index == 0) {
+                    Log.v(TAG,"Before else if index == 0");
+                    DateTime teststart2=event.getEnd().getDateTime();
+                    long milliseconds3 = teststart2.getValue();
+                    startDateJoda=new org.joda.time.DateTime(milliseconds3);
+                    Log.v(TAG,"startDateJoda value: "+startDateJoda.toString());
+                }
+
+                long milliseconds5=0;
+                Log.v(TAG,"Before teststart4");
+                if(index!=0) {
+                    DateTime teststart4 = items.get(index - 1).getEnd().getDateTime();
+                    Log.v(TAG, "After teststart4");
+                    milliseconds5 = teststart4.getValue();
+                    Log.v(TAG, "Before if milliseconds5");
+                }
+                if (new org.joda.time.DateTime(milliseconds5).isBefore(eventStartJoda)) {
+                    freeSlots.add(new MyEvent
+                            (new org.joda.time.DateTime(milliseconds5) ,eventStartJoda));
+                    Log.v(TAG,"xxxxxxx1 value: "+ new org.joda.time.DateTime(milliseconds5).toString());
+                }
+
+                DateTime teststart3=event.getEnd().getDateTime();
+                long milliseconds4 = teststart3.getValue();
+
+                if ((items.size() == (index + 1)) && new org.joda.time.DateTime(milliseconds4).isBefore(endDateJoda)) {
+                    freeSlots.add(new MyEvent(eventEndJoda, endDateJoda));
+                    Log.v(TAG,"xxxxxxx2 value: "+ new org.joda.time.DateTime(milliseconds4).toString());
+                }
+            }
+            Log.v(TAG,"Before outside items size == 0 ");
+            if (items.size() == 0) {
+                Log.v(TAG,"Before Inside items size == 0 ");
+                freeSlots.add(new MyEvent(startDateJoda,endDateJoda));
+                Log.v(TAG,"After Inside items size == 0 ");
+            }
+            Log.v(TAG,"After outside items size == 0 ");
+
+            ArrayList<MyEvent> hourSlots = new ArrayList<MyEvent>();
+            MyEvent temp = null;
+            for(int index =0;index<freeSlots.size();index++){
+                MyEvent free = (MyEvent) freeSlots.get(index);
+                Log.v(TAG,"Free slot size : "+freeSlots.size());
+                int freeHours = free.endDate.getHourOfDay()- free.startDate.getHourOfDay();
+                Log.v(TAG,"FreeHours: "+freeHours);
+                org.joda.time.DateTime freeStart = free.startDate, freeEnd = free.endDate;
+                Log.v(TAG,"Free Start Date: "+free.startDate.toString()+"Free End Date: "+free.endDate.toString());
+                Log.v(TAG,"Before eventStrings: "+free.startDate.toString()+" : "+free.endDate.toString());
+
+//                java.util.Date juDateStart123 = freeStart.toDate();
+//                java.util.Date juDateEnd123 = freeEnd.toDate();
+//
+//                // Convert from j.u.Date to Google Date.
+//                com.google.api.client.util.DateTime googleDateTimeStart12 = new com.google.api.client.util.DateTime( juDateStart123 );
+//                com.google.api.client.util.DateTime googleDateTimeEnd12 = new com.google.api.client.util.DateTime( juDateEnd123 );
+
+//                org.joda.time.DateTime instant= new org.joda.time.DateTime();
+//                String s =free.startDate.toString();
+//                DateTimeFormatter dtf = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
+//
+//                instant = dtf.parseDateTime(s);
+//                Log.v(TAG,"jodatime : "+ instant);
+
                 eventStrings.add(
-                        String.format("%s (%s) test", event.getSummary(), start));
+                               String.format(" "+freeStart.toString("dd/MM/yy HH:mm:ss")+" - "+freeEnd.toString("dd/MM/yy HH:mm:ss")));
+                Log.v(TAG,"After eventStrings: "+free.startDate.toString("dd/MM/yy HH:mm:ss")+" : "+free.endDate.toString("dd/MM/yy HH:mm:ss"));
+//                Log.v(TAG,"Hour slots : "+hourSlots.toString());
+//                eventStrings.add(
+//                        String.format( String.format("Hours "+hourSlots)));
+//                while(freeStart.getHourOfDay() + freeHours + interval>=0) { // 11 + 4 + 1 >= 0
+//                    Log.v(TAG,"While loop inside");
+//                    if(freeHours>=interval) {
+//                        Log.v(TAG,"While loop inside if condition inside");
+//                        temp.startDate = free.startDate;
+//                        temp.endDate= temp.endDate.hourOfDay().setCopy(temp.endDate.getHourOfDay()+freeHours);
+//                        Log.v(TAG,"Tmp Start Date1: "+String.valueOf(temp.startDate)+"Tmp End Date1: "+String.valueOf(temp.endDate));
+//                        temp.startDate = free.startDate;
+//                        temp.startDate = temp.startDate.hourOfDay().setCopy(temp.startDate.getHourOfDay()+freeHours-interval);
+//                        Log.v(TAG,"Tmp Start Date2: "+temp.startDate+"Tmp End Date2: "+temp.endDate);
+//                        if(temp.startDate.getHourOfDay() >= rootStart.getHourOfDay() && temp.endDate.getHourOfDay() <= rootEnd.getHourOfDay()) {
+//                            Log.v(TAG,"While loop inside if condition inside if condition inside");
+//                            hourSlots.add(new MyEvent(temp.startDate,temp.endDate));
+//                            Log.v(TAG,"Tmp hour slot: "+temp.startDate+" : "+temp.endDate);
+//                            temp = null;
+//                        }
+//                    }
+//                    freeHours--;
+//                }
+
+
             }
 
+//            Log.v(TAG,"Before Free List : ");
+//            List<MyEvent> FreeList = new ArrayList<MyEvent>();
+//            for (MyEvent events2: FreeList) {
+//                org.joda.time.DateTime start = events2.startDate;
+//                org.joda.time.DateTime end = events2.endDate;
+//                // Convert from Joda-Time to old bundled j.u.Date
+//                java.util.Date juDateStart2 = start.toDate();
+//                java.util.Date juDateEnd2 = end.toDate();
+//
+//                // Convert from j.u.Date to Google Date.
+//                com.google.api.client.util.DateTime googleDateTimeStart2 = new com.google.api.client.util.DateTime( juDateStart2 );
+//                com.google.api.client.util.DateTime googleDateTimeEnd2 = new com.google.api.client.util.DateTime( juDateEnd2 );
+//
+//                if (googleDateTimeStart2== null) {
+//                    start = events2.startDate;
+//                    end = events2.endDate;
+//
+//                    juDateStart2 = start.toDate();
+//                    juDateEnd2 = end.toDate();
+//
+//                    // Convert from j.u.Date to Google Date.
+//                    googleDateTimeStart2 = new com.google.api.client.util.DateTime( juDateStart2 );
+//                    googleDateTimeEnd2 = new com.google.api.client.util.DateTime( juDateEnd2 );
+//
+//                }
+//                eventStrings.add(
+//                        String.format("(%s) - (%s)", googleDateTimeStart2,googleDateTimeEnd2));
+//                Log.v(TAG,"Free List : "+googleDateTimeStart2+" : "+googleDateTimeEnd2);
+//            }
+
+            Log.v(TAG,"Event Strings : "+eventStrings);
             return eventStrings;
         }
-
 
         @Override
         protected void onPreExecute() {
