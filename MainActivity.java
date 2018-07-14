@@ -3,14 +3,18 @@ package com.example.quickstart;
 import android.Manifest;
 import android.accounts.AccountManager;
 import android.app.Activity;
+import android.app.AlarmManager;
 import android.app.Dialog;
+import android.app.PendingIntent;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -22,6 +26,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
@@ -39,6 +44,7 @@ import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.Events;
 
 
+import org.joda.time.LocalDateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
@@ -46,13 +52,15 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ThreadFactory;
 
 import pub.devrel.easypermissions.AfterPermissionGranted;
 import pub.devrel.easypermissions.EasyPermissions;
 
-public class MainActivity extends Activity implements EasyPermissions.PermissionCallbacks {
+public class MainActivity extends AppCompatActivity implements EasyPermissions.PermissionCallbacks,Runnable {
 
     GoogleAccountCredential mCredential;
     private TextView mOutputText,text2;
@@ -73,6 +81,7 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
      * Create the main activity.
      * @param savedInstanceState previously saved instance data.
      */
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -321,6 +330,12 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
         dialog.show();
     }
 
+    @Override
+    public void run() {
+
+    }
+
+
     /**
      * An asynchronous task that handles the Google Calendar API call.
      * Placing the API calls in their own task ensures the UI stays responsive.
@@ -412,20 +427,19 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
         private List<String> getDataFromApi() throws IOException {
 //             List the next 10 events from the primary calendar.
 
-            DateTime startDate = new DateTime(System.currentTimeMillis());
-            DateTime endDate = new DateTime(System.currentTimeMillis()+24 * 60 * 60 * 1000);
+//            DateTime startDate = new DateTime(System.currentTimeMillis());
+//            DateTime endDate = new DateTime(System.currentTimeMillis()+24 * 60 * 60 * 1000);
+//
+//            Log.v(TAG,"Start Date value: "+startDate .toString());
+//            Log.v(TAG,"End Date value: "+endDate.toString());
 
+            LocalDateTime now = LocalDateTime.now();
+            int year = now.getYear();
+            int month = now.getMonthOfYear();
+            int day = now.getDayOfMonth();
 
-
-            Log.v(TAG,"Start Date value: "+startDate .toString());
-            Log.v(TAG,"End Date value: "+endDate.toString());
-
-            Date date = new Date();
-            Date tomorrow = new Date();
-            tomorrow.setTime(tomorrow.getTime() + (1000*3600*24));
-
-            org.joda.time.DateTime startDateJoda= new org.joda.time.DateTime();
-            org.joda.time.DateTime endDateJoda= startDateJoda.plusHours(24);
+            org.joda.time.DateTime startDateJoda= new org.joda.time.DateTime(year,month,day,7,00);
+            org.joda.time.DateTime endDateJoda= new org.joda.time.DateTime(year,month,day,22,00);
 
             // Convert from Joda-Time to old bundled j.u.Date
             java.util.Date juDateStart = startDateJoda.toDate();
@@ -436,16 +450,13 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
             // Convert from j.u.Date to Google Date.
             com.google.api.client.util.DateTime googleDateTimeStart = new com.google.api.client.util.DateTime( juDateStart );
             com.google.api.client.util.DateTime googleDateTimeEnd = new com.google.api.client.util.DateTime( juDateEnd );
-
             Log.v(TAG,"Start Date Google value: "+googleDateTimeStart.toString());
             Log.v(TAG,"End Date Google value: "+googleDateTimeEnd.toString());
 
             List<String> eventStrings = new ArrayList<String>();
-            List<String> tests = new ArrayList<String>();
 
             org.joda.time.DateTime rootStart = startDateJoda;
             org.joda.time.DateTime rootEnd = endDateJoda;
-
 
             Events events = mService.events().list("primary")
                     .setMaxResults(10)
@@ -505,9 +516,11 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
                     Log.v(TAG, "Before if milliseconds5");
                 }
                 if (new org.joda.time.DateTime(milliseconds5).isBefore(eventStartJoda)) {
-                    freeSlots.add(new MyEvent
-                            (new org.joda.time.DateTime(milliseconds5) ,eventStartJoda));
+                    if(index!=0) {
+                        freeSlots.add(new MyEvent
+                                (new org.joda.time.DateTime(milliseconds5), eventStartJoda));
                     Log.v(TAG,"xxxxxxx1 value: "+ new org.joda.time.DateTime(milliseconds5).toString());
+                    }
                 }
 
                 DateTime teststart3=event.getEnd().getDateTime();
@@ -537,23 +550,22 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
                 Log.v(TAG,"Free Start Date: "+free.startDate.toString()+"Free End Date: "+free.endDate.toString());
                 Log.v(TAG,"Before eventStrings: "+free.startDate.toString()+" : "+free.endDate.toString());
 
-//                java.util.Date juDateStart123 = freeStart.toDate();
-//                java.util.Date juDateEnd123 = freeEnd.toDate();
-//
-//                // Convert from j.u.Date to Google Date.
-//                com.google.api.client.util.DateTime googleDateTimeStart12 = new com.google.api.client.util.DateTime( juDateStart123 );
-//                com.google.api.client.util.DateTime googleDateTimeEnd12 = new com.google.api.client.util.DateTime( juDateEnd123 );
+                final int hour=Integer.valueOf(freeStart.toString("HH"));
+                final int mminute=Integer.valueOf(freeStart.toString("mm"));
+                Log.v(TAG,"Alarm Time "+hour+":"+mminute);
 
-//                org.joda.time.DateTime instant= new org.joda.time.DateTime();
-//                String s =free.startDate.toString();
-//                DateTimeFormatter dtf = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
 //
-//                instant = dtf.parseDateTime(s);
-//                Log.v(TAG,"jodatime : "+ instant);
-
+//                new Thread(new Runnable() {
+//                    public void run() {
+//                        // a potentially  time consuming task
+//                        startAlarm(hour,mminute);
+//                    }
+//                }).start();
                 eventStrings.add(
                                String.format(" "+freeStart.toString("dd/MM/yy HH:mm:ss")+" - "+freeEnd.toString("dd/MM/yy HH:mm:ss")));
                 Log.v(TAG,"After eventStrings: "+free.startDate.toString("dd/MM/yy HH:mm:ss")+" : "+free.endDate.toString("dd/MM/yy HH:mm:ss"));
+
+
 //                Log.v(TAG,"Hour slots : "+hourSlots.toString());
 //                eventStrings.add(
 //                        String.format( String.format("Hours "+hourSlots)));
@@ -580,38 +592,33 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
 
             }
 
-//            Log.v(TAG,"Before Free List : ");
-//            List<MyEvent> FreeList = new ArrayList<MyEvent>();
-//            for (MyEvent events2: FreeList) {
-//                org.joda.time.DateTime start = events2.startDate;
-//                org.joda.time.DateTime end = events2.endDate;
-//                // Convert from Joda-Time to old bundled j.u.Date
-//                java.util.Date juDateStart2 = start.toDate();
-//                java.util.Date juDateEnd2 = end.toDate();
-//
-//                // Convert from j.u.Date to Google Date.
-//                com.google.api.client.util.DateTime googleDateTimeStart2 = new com.google.api.client.util.DateTime( juDateStart2 );
-//                com.google.api.client.util.DateTime googleDateTimeEnd2 = new com.google.api.client.util.DateTime( juDateEnd2 );
-//
-//                if (googleDateTimeStart2== null) {
-//                    start = events2.startDate;
-//                    end = events2.endDate;
-//
-//                    juDateStart2 = start.toDate();
-//                    juDateEnd2 = end.toDate();
-//
-//                    // Convert from j.u.Date to Google Date.
-//                    googleDateTimeStart2 = new com.google.api.client.util.DateTime( juDateStart2 );
-//                    googleDateTimeEnd2 = new com.google.api.client.util.DateTime( juDateEnd2 );
-//
-//                }
-//                eventStrings.add(
-//                        String.format("(%s) - (%s)", googleDateTimeStart2,googleDateTimeEnd2));
-//                Log.v(TAG,"Free List : "+googleDateTimeStart2+" : "+googleDateTimeEnd2);
-//            }
-
             Log.v(TAG,"Event Strings : "+eventStrings);
             return eventStrings;
+        }
+        int broadcastCode=0;
+        public void startAlarm(int hour,int mminute){
+            broadcastCode++;
+            Intent intent=new Intent(MainActivity.this,MyBroadcastReceiver.class);
+            PendingIntent pendingIntent=PendingIntent.getBroadcast(MainActivity.this,broadcastCode,intent,0);
+            AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
+            Calendar cal_alarm=Calendar.getInstance();
+            cal_alarm.set(Calendar.HOUR_OF_DAY,hour);
+            cal_alarm.set(Calendar.MINUTE,mminute);
+            cal_alarm.set(Calendar.SECOND,00);
+
+
+            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT){
+                alarmManager.setExact(AlarmManager.RTC_WAKEUP,cal_alarm.getTimeInMillis(),pendingIntent);
+//            alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, cal_alarm.getTimeInMillis(),
+//                    AlarmManager.INTERVAL_DAY, pendingIntent);
+                Toast.makeText(MainActivity.this,"Alarm > KITKAT & Alarm Set For: "+hour+" : "+mminute,Toast.LENGTH_SHORT).show();
+            }
+            if(Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT){
+                alarmManager.set(AlarmManager.RTC_WAKEUP,cal_alarm.getTimeInMillis(),pendingIntent);
+//            alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, cal_alarm.getTimeInMillis(),
+//                    AlarmManager.INTERVAL_DAY, pendingIntent);
+                Toast.makeText(MainActivity.this,"Alarm < KITKAT & Alarm Set For: "+hour+" : "+mminute,Toast.LENGTH_SHORT).show();
+            }
         }
 
         @Override
@@ -651,5 +658,6 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
                 mOutputText.setText("Request cancelled.");
             }
         }
+
     }
 }
