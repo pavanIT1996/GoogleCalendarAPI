@@ -13,6 +13,10 @@ public class MyEvent implements Comparable<MyEvent> {
     public DateTime startDate; // org.joda.time.DateTime
     public DateTime endDate; // org.joda.time.DateTime
 
+    public MyEvent(){
+
+    }
+
     public MyEvent(DateTime startDate, DateTime endDate) {
         this.startDate = startDate;
         this.endDate = endDate;

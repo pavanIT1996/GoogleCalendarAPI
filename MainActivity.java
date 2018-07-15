@@ -540,7 +540,10 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
             Log.v(TAG,"After outside items size == 0 ");
 
             ArrayList<MyEvent> hourSlots = new ArrayList<MyEvent>();
-            MyEvent temp = null;
+            org.joda.time.DateTime tempstart= null;
+            org.joda.time.DateTime tempend= null;
+            MyEvent temp = new MyEvent();
+            int val=0;
             for(int index =0;index<freeSlots.size();index++){
                 MyEvent free = (MyEvent) freeSlots.get(index);
                 Log.v(TAG,"Free slot size : "+freeSlots.size());
@@ -550,44 +553,54 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
                 Log.v(TAG,"Free Start Date: "+free.startDate.toString()+"Free End Date: "+free.endDate.toString());
                 Log.v(TAG,"Before eventStrings: "+free.startDate.toString()+" : "+free.endDate.toString());
 
-                final int hour=Integer.valueOf(freeStart.toString("HH"));
-                final int mminute=Integer.valueOf(freeStart.toString("mm"));
-                Log.v(TAG,"Alarm Time "+hour+":"+mminute);
-
-//
-//                new Thread(new Runnable() {
-//                    public void run() {
-//                        // a potentially  time consuming task
-//                        startAlarm(hour,mminute);
-//                    }
-//                }).start();
-                eventStrings.add(
-                               String.format(" "+freeStart.toString("dd/MM/yy HH:mm:ss")+" - "+freeEnd.toString("dd/MM/yy HH:mm:ss")));
-                Log.v(TAG,"After eventStrings: "+free.startDate.toString("dd/MM/yy HH:mm:ss")+" : "+free.endDate.toString("dd/MM/yy HH:mm:ss"));
 
 
-//                Log.v(TAG,"Hour slots : "+hourSlots.toString());
 //                eventStrings.add(
-//                        String.format( String.format("Hours "+hourSlots)));
-//                while(freeStart.getHourOfDay() + freeHours + interval>=0) { // 11 + 4 + 1 >= 0
-//                    Log.v(TAG,"While loop inside");
-//                    if(freeHours>=interval) {
-//                        Log.v(TAG,"While loop inside if condition inside");
-//                        temp.startDate = free.startDate;
+//                               String.format(" "+freeStart.toString("dd/MM/yy HH:mm:ss")+" - "+freeEnd.toString("dd/MM/yy HH:mm:ss")));
+//                Log.v(TAG,"Before while eventStrings: "+free.startDate.toString("dd/MM/yy HH:mm:ss")+" : "+free.endDate.toString("dd/MM/yy HH:mm:ss"));
+//
+//
+//                Log.v(TAG,"Hour slots : "+hourSlots.toString());
+//                Log.v(TAG,"GetHour slots : "+freeStart.getHourOfDay());
+//                Log.v(TAG,"free hours : "+freeHours);
+//                Log.v(TAG,"interval : "+interval);
+
+                while(freeStart.getHourOfDay() + freeHours + interval>=0) { // 11 + 4 + 1 >= 0
+                    if(freeHours>=interval) {
+                        Log.v(TAG,"free startDate : "+free.startDate);
+//                        temp.endDate = free.startDate;
+                        tempend=free.startDate;
+                        Log.v(TAG,"Temp startDate : "+tempend);
 //                        temp.endDate= temp.endDate.hourOfDay().setCopy(temp.endDate.getHourOfDay()+freeHours);
-//                        Log.v(TAG,"Tmp Start Date1: "+String.valueOf(temp.startDate)+"Tmp End Date1: "+String.valueOf(temp.endDate));
+                        tempend= tempend.hourOfDay().setCopy(tempend.getHourOfDay()+freeHours);
+                        Log.v(TAG,"Tmp Start Date1: "+String.valueOf(tempstart)+"Tmp End Date1: "+String.valueOf(tempend));
 //                        temp.startDate = free.startDate;
+                        tempstart=free.startDate;
+                        Log.v(TAG,"Temp endDate : "+tempstart);
 //                        temp.startDate = temp.startDate.hourOfDay().setCopy(temp.startDate.getHourOfDay()+freeHours-interval);
-//                        Log.v(TAG,"Tmp Start Date2: "+temp.startDate+"Tmp End Date2: "+temp.endDate);
-//                        if(temp.startDate.getHourOfDay() >= rootStart.getHourOfDay() && temp.endDate.getHourOfDay() <= rootEnd.getHourOfDay()) {
-//                            Log.v(TAG,"While loop inside if condition inside if condition inside");
-//                            hourSlots.add(new MyEvent(temp.startDate,temp.endDate));
-//                            Log.v(TAG,"Tmp hour slot: "+temp.startDate+" : "+temp.endDate);
-//                            temp = null;
-//                        }
-//                    }
-//                    freeHours--;
-//                }
+
+                        tempstart = tempstart.hourOfDay().setCopy(tempstart.getHourOfDay()+freeHours-interval);
+                        Log.v(TAG,"Tmp Start Date2: "+tempstart+"Tmp End Date2: "+tempend);
+                        if(tempstart.getHourOfDay() >= freeStart.getHourOfDay() && tempend.getHourOfDay() <= freeEnd.getHourOfDay()) {
+                            Log.v(TAG,"While loop inside if condition inside if condition inside");
+                            if(val!=0) {
+                                hourSlots.add(new MyEvent(tempstart, tempend));
+                                Log.v(TAG, "Tmp hour slot: " + tempstart + " : " + tempend);
+                                eventStrings.add(
+                                        String.format(" " + tempstart.toString("dd/MM/yy HH:mm:ss") + " - " + tempend.toString("dd/MM/yy HH:mm:ss")));
+                                Log.v(TAG, "After eventStrings: " + tempstart.toString("dd/MM/yy HH:mm:ss") + " : " + tempend.toString("dd/MM/yy HH:mm:ss"));
+                                int hour=Integer.valueOf(tempstart.toString("HH"));
+                                int mminute=Integer.valueOf(tempstart.toString("mm"));
+                                Log.v(TAG,"Alarm Time "+hour+":"+mminute);
+//                                startAlarm(hour,mminute);
+                            }
+                            val++;
+                            tempstart=null;
+                            tempend=null;
+                        }
+                    }
+                    freeHours--;
+                }
 
 
             }
@@ -595,6 +608,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
             Log.v(TAG,"Event Strings : "+eventStrings);
             return eventStrings;
         }
+
         int broadcastCode=0;
         public void startAlarm(int hour,int mminute){
             broadcastCode++;
