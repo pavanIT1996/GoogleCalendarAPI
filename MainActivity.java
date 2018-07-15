@@ -592,7 +592,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
                                 int hour=Integer.valueOf(tempstart.toString("HH"));
                                 int mminute=Integer.valueOf(tempstart.toString("mm"));
                                 Log.v(TAG,"Alarm Time "+hour+":"+mminute);
-//                                startAlarm(hour,mminute);
+                                startAlarm(hour,mminute);
                             }
                             val++;
                             tempstart=null;
@@ -619,19 +619,21 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
             cal_alarm.set(Calendar.HOUR_OF_DAY,hour);
             cal_alarm.set(Calendar.MINUTE,mminute);
             cal_alarm.set(Calendar.SECOND,00);
-
+            Log.v(TAG,"Broadcast code : "+broadcastCode);
 
             if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT){
                 alarmManager.setExact(AlarmManager.RTC_WAKEUP,cal_alarm.getTimeInMillis(),pendingIntent);
+                Log.v(TAG,"Set Alarm For : "+hour+":"+mminute);
 //            alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, cal_alarm.getTimeInMillis(),
 //                    AlarmManager.INTERVAL_DAY, pendingIntent);
-                Toast.makeText(MainActivity.this,"Alarm > KITKAT & Alarm Set For: "+hour+" : "+mminute,Toast.LENGTH_SHORT).show();
+//                Toast.makeText(MainActivity.this,"Alarm > KITKAT & Alarm Set For: "+hour+" : "+mminute,Toast.LENGTH_SHORT).show();
             }
             if(Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT){
                 alarmManager.set(AlarmManager.RTC_WAKEUP,cal_alarm.getTimeInMillis(),pendingIntent);
+                Log.v(TAG,"Set Alarm For : "+hour+":"+mminute);
 //            alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, cal_alarm.getTimeInMillis(),
 //                    AlarmManager.INTERVAL_DAY, pendingIntent);
-                Toast.makeText(MainActivity.this,"Alarm < KITKAT & Alarm Set For: "+hour+" : "+mminute,Toast.LENGTH_SHORT).show();
+//                Toast.makeText(MainActivity.this,"Alarm < KITKAT & Alarm Set For: "+hour+" : "+mminute,Toast.LENGTH_SHORT).show();
             }
         }
 

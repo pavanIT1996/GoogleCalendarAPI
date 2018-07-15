@@ -59,7 +59,7 @@ public class MyBroadcastReceiver extends BroadcastReceiver {
         PendingIntent pendingIntent= PendingIntent.getActivity(context,100,repeating_intent,PendingIntent.FLAG_UPDATE_CURRENT);
         NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context,CHANNEL_ID)
                 .setContentIntent(pendingIntent)
-                .setSmallIcon(R.drawable.ic_launcher_background)
+                .setSmallIcon(R.drawable.drink)
                 .setContentTitle(textTitle)
                 .setContentText(textContent)
                 .setStyle(new NotificationCompat.BigTextStyle()
