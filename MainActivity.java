@@ -4,10 +4,12 @@ import android.Manifest;
 import android.accounts.AccountManager;
 import android.app.Activity;
 import android.app.AlarmManager;
+import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.PendingIntent;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
@@ -24,9 +26,14 @@ import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ToggleButton;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
@@ -47,6 +54,7 @@ import com.google.api.services.calendar.model.Events;
 import org.joda.time.LocalDateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+import org.w3c.dom.Text;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -63,8 +71,11 @@ import pub.devrel.easypermissions.EasyPermissions;
 public class MainActivity extends AppCompatActivity implements EasyPermissions.PermissionCallbacks,Runnable {
 
     GoogleAccountCredential mCredential;
-    private TextView mOutputText,text2;
+    private TextView mOutputText,defaultText,calendarText,customText;
     private Button mCallApiButton;
+    private RadioGroup radioGroup;
+    private RadioButton radiobutton1,radiobutton2,radiobutton3;
+    private Switch switch1;
     ProgressDialog mProgress;
 
     private static final String TAG= "MainActivity";
@@ -85,53 +96,250 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        LinearLayout activityLayout = new LinearLayout(this);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.MATCH_PARENT);
-        activityLayout.setLayoutParams(lp);
-        activityLayout.setOrientation(LinearLayout.VERTICAL);
-        activityLayout.setPadding(16, 16, 16, 16);
+        setContentView(R.layout.activity_main);
+        radioGroup = (RadioGroup) findViewById(R.id.radioGroup);
+        radiobutton1 = (RadioButton) findViewById(R.id.radioButton);
+        radiobutton2 = (RadioButton) findViewById(R.id.radioButton2);
+        radiobutton3 = (RadioButton) findViewById(R.id.radioButton3);
 
-        ViewGroup.LayoutParams tlp = new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT);
+        defaultText = (TextView) findViewById(R.id.textView1);
+        calendarText = (TextView) findViewById(R.id.textView2);
+        customText = (TextView) findViewById(R.id.textView3);
+        switch1= (Switch) findViewById(R.id.switch1);
 
-        mCallApiButton = new Button(this);
-        mCallApiButton.setText(BUTTON_TEXT);
-        mCallApiButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mCallApiButton.setEnabled(false);
-                mOutputText.setText("");
-                getResultsFromApi();
-                mCallApiButton.setEnabled(true);
-            }
-        });
-        activityLayout.addView(mCallApiButton);
+        defaultText.setVisibility(defaultText.GONE);
+        calendarText.setVisibility(calendarText.GONE);
+        customText.setVisibility(customText.GONE);
+        switch1.setVisibility(switch1.GONE);
 
-        mOutputText = new TextView(this);
-        mOutputText.setLayoutParams(tlp);
-        mOutputText.setPadding(16, 16, 16, 16);
-        mOutputText.setVerticalScrollBarEnabled(true);
-        mOutputText.setMovementMethod(new ScrollingMovementMethod());
+        mCallApiButton = (Button) findViewById(R.id.button);
+
+        mOutputText = (TextView)findViewById(R.id.textView);
+
         mOutputText.setText(
-                "Click the \'" + BUTTON_TEXT +"\' button to test the API.");
-        activityLayout.addView(mOutputText);
+                "Click the \'" + BUTTON_TEXT +"\' button to test the API.\n");
 
         mProgress = new ProgressDialog(this);
         mProgress.setMessage("Calling Google Calendar API ...");
-
-        setContentView(activityLayout);
-
+        
         // Initialize credentials and service object.
         mCredential = GoogleAccountCredential.usingOAuth2(
                 getApplicationContext(), Arrays.asList(SCOPES))
                 .setBackOff(new ExponentialBackOff());
+        onRadioButtonChecked();
+        onSwtichButtonChecked();
+
     }
 
+    public void onSwtichButtonChecked(){
+        switch1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    DefaultAlert();
+                    Toast.makeText(MainActivity.this, "Default Settings Enabled",
+                            Toast.LENGTH_SHORT).show();
+                } else {
+                    // The toggle is disabled
+                    for(int i=1;i<=8;i++)
+                        cancel_Alarm(i);
+                    Toast.makeText(MainActivity.this, "Default Settings Disabled",
+                            Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+    }
+    public void GoPreferences(View view){
+        Intent intent=new Intent(MainActivity.this,PreferencesActivity.class);
+        startActivity(intent);
+    }
+    public void onRadioButtonChecked() {
+        Log.v(TAG,"Radio Button : ");
+        radioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup radioGroup, int buttonId) {
+                // Check which radio button was clicked
+                Log.v(TAG,"on checked: value" + radioGroup+" radio "+buttonId);
+                switch(buttonId) {
+                    case R.id.radioButton:
+                        Log.v(TAG,"radio button1 : ");
+//                        if(radiobutton1.isChecked()){
+//                            openDefault();
+//                        }
+                        defaultText.setVisibility(defaultText.VISIBLE);
+                        switch1.setVisibility(switch1.VISIBLE);
+                        switch1.setChecked(true);
+                        calendarText.setVisibility(calendarText.GONE);
+                        customText.setVisibility(customText.GONE);
+                        break;
+                    case R.id.radioButton2:
+                        Log.v(TAG,"radio button2 : ");
+                        switch1.setChecked(false);
+                        defaultText.setVisibility(defaultText.GONE);
+                        calendarText.setVisibility(calendarText.VISIBLE);
+                        customText.setVisibility(customText.GONE);
+                        switch1.setVisibility(switch1.GONE);
+//                        if(radiobutton2.isChecked()){
+//                            openCalendar();
+//                        }
+                        break;
+                    case R.id.radioButton3:
+                        Log.v(TAG,"radio button3 : ");
+                        switch1.setChecked(false);
+                        defaultText.setVisibility(defaultText.GONE);
+                        calendarText.setVisibility(calendarText.GONE);
+                        customText.setVisibility(customText.VISIBLE);
+                        switch1.setVisibility(switch1.GONE);
+//                        if(radiobutton3.isChecked()){
+//                            openCustom();
+//                        }
+                }
+            }
+        });
+    }
 
+    public void openDefault(){
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
+        alertDialogBuilder.setMessage("Do you really want to enable Default settings? ");
+                alertDialogBuilder.setPositiveButton("yes",
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface arg0, int arg1) {
+                                mOutputText.setText("Default Settings\n");
+                                DefaultAlert();
+                                Toast.makeText(MainActivity.this, "Default Settings Enabled",
+                                        Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                alertDialogBuilder.setNegativeButton("No",
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+//                                radioGroup.setOnCheckedChangeListener(null);
+//                                radiobutton1.setChecked(false);
+//                                onRadioButtonChecked();
+                                radioGroup.clearCheck();
+                            }
+                        });
 
+        AlertDialog alertDialog = alertDialogBuilder.create();
+        alertDialog.show();
+    }
+
+    public void openCalendar(){
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
+        alertDialogBuilder.setMessage("Do you really want to enable Google calendar settings? ");
+        alertDialogBuilder.setPositiveButton("yes",
+                new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface arg0, int arg1) {
+                        mOutputText.setText("");
+                        getResultsFromApi();
+                        Toast.makeText(MainActivity.this, "Google Calendar Settings Enabled",
+                                Toast.LENGTH_SHORT).show();
+                    }
+                });
+        alertDialogBuilder.setNegativeButton("No",
+                new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+//                        radioGroup.setOnCheckedChangeListener(null);
+//                        radiobutton2.setChecked(false);
+//                        onRadioButtonChecked();
+                        radioGroup.clearCheck();
+                    }
+                });
+
+        AlertDialog alertDialog = alertDialogBuilder.create();
+        alertDialog.show();
+    }
+
+    public void openCustom(){
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
+        alertDialogBuilder.setMessage("Do you really want to enable Custom settings? ");
+        alertDialogBuilder.setPositiveButton("yes",
+                new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface arg0, int arg1) {
+                        Toast.makeText(MainActivity.this, "Custom Settings Enabled",
+                                Toast.LENGTH_SHORT).show();
+                    }
+                });
+        alertDialogBuilder.setNegativeButton("No",
+                new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+//                        radioGroup.setOnCheckedChangeListener(null);
+//                        radiobutton3.setChecked(false);
+//                        onRadioButtonChecked();
+                        radioGroup.clearCheck();
+                    }
+                });
+
+        AlertDialog alertDialog = alertDialogBuilder.create();
+        alertDialog.show();
+    }
+
+    public void DefaultAlert(){
+        int broadcast=0;
+        defaultText.setText("");
+        defaultText.setText("Default Settings\n");
+        List<Time> times = new ArrayList<>();
+        times.add(new Time(7, 00));
+        times.add(new Time(9, 00));
+        times.add(new Time(11, 30));
+        times.add(new Time(13, 30));
+        times.add(new Time(15, 00));
+        times.add(new Time(17, 00));
+        times.add(new Time(20, 00));
+        times.add(new Time(22, 00));
+
+        Intent intent=new Intent(MainActivity.this,MyBroadcastReceiver.class);
+        AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
+
+        for (Time time : times){
+            PendingIntent pendingIntent=PendingIntent.getBroadcast(this.getApplicationContext(),broadcast++,intent,0);
+            Calendar actual=Calendar.getInstance();
+            int hour2=actual.get(Calendar.HOUR_OF_DAY);
+            int minute2=actual.get(Calendar.MINUTE);
+            Calendar cal_alarm=Calendar.getInstance();
+            cal_alarm.set(Calendar.HOUR_OF_DAY,time.hour);
+            cal_alarm.set(Calendar.MINUTE,time.minute);
+            cal_alarm.set(Calendar.SECOND,00);
+            Log.v(TAG,"Set Alarm For : "+time.hour+":"+time.minute);
+
+            if(time.hour<hour2  && time.minute<minute2){
+                Log.v(TAG,"Hour passed : "+time.hour+"<"+hour2);
+                Log.v(TAG,"Minute passed : "+time.minute+"<"+minute2);
+            }else if (time.hour==hour2 && time.minute<minute2){
+                Log.v(TAG,"Hour passed : "+time.hour+"="+hour2);
+                Log.v(TAG,"Minute passed : "+time.minute+"<"+minute2);
+            }
+            else {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                    alarmManager.setExact(AlarmManager.RTC_WAKEUP, cal_alarm.getTimeInMillis(), pendingIntent);
+//                    alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, cal_alarm.getTimeInMillis(),
+//                            AlarmManager.INTERVAL_DAY, pendingIntent);
+                }
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT) {
+                    alarmManager.set(AlarmManager.RTC_WAKEUP, cal_alarm.getTimeInMillis(), pendingIntent);
+//                    alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, cal_alarm.getTimeInMillis(),
+//                            AlarmManager.INTERVAL_DAY, pendingIntent);
+                }
+                defaultText.append(broadcast + ". " + time.hour + ":" + time.minute + "\n");
+            }
+        }
+    }
+
+    public void cancel_Alarm(int value){
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        Intent myIntent = new Intent(this.getApplicationContext(), MyBroadcastReceiver.class);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                getApplicationContext(), value, myIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT);
+        alarmManager.cancel(pendingIntent);
+        Log.v(TAG,"Cancel Alarm : "+value+","+myIntent+","+pendingIntent);
+        Toast.makeText(this,"Alarm Cancelled",Toast.LENGTH_SHORT).show();
+    }
     /**
      * Attempt to call the API, after verifying that all the preconditions are
      * satisfied. The preconditions are: Google Play Services installed, an
@@ -583,7 +791,19 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
                         Log.v(TAG,"Tmp Start Date2: "+tempstart+"Tmp End Date2: "+tempend);
                         if(tempstart.getHourOfDay() >= freeStart.getHourOfDay() && tempend.getHourOfDay() <= freeEnd.getHourOfDay()) {
                             Log.v(TAG,"While loop inside if condition inside if condition inside");
-                            if(val!=0) {
+                            if(items.size()!=0) {
+                                if (val != 0) {
+                                    hourSlots.add(new MyEvent(tempstart, tempend));
+                                    Log.v(TAG, "Tmp hour slot: " + tempstart + " : " + tempend);
+                                    eventStrings.add(
+                                            String.format(" " + tempstart.toString("dd/MM/yy HH:mm:ss") + " - " + tempend.toString("dd/MM/yy HH:mm:ss")));
+                                    Log.v(TAG, "After eventStrings: " + tempstart.toString("dd/MM/yy HH:mm:ss") + " : " + tempend.toString("dd/MM/yy HH:mm:ss"));
+                                    int hour = Integer.valueOf(tempstart.toString("HH"));
+                                    int mminute = Integer.valueOf(tempstart.toString("mm"));
+                                    Log.v(TAG, "Alarm Time " + hour + ":" + mminute);
+                                    startAlarm(hour,mminute);
+                                }
+                            }else{
                                 hourSlots.add(new MyEvent(tempstart, tempend));
                                 Log.v(TAG, "Tmp hour slot: " + tempstart + " : " + tempend);
                                 eventStrings.add(
@@ -594,6 +814,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
                                 Log.v(TAG,"Alarm Time "+hour+":"+mminute);
                                 startAlarm(hour,mminute);
                             }
+
                             val++;
                             tempstart=null;
                             tempend=null;
@@ -649,7 +870,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
             if (output == null || output.size() == 0) {
                 mOutputText.setText("No results returned.");
             } else {
-                output.add(0, "Data retrieved using the Google Calendar API:");
+                output.add(0, "Data retrieved using the Google Calendar API:\n");
                 mOutputText.setText(TextUtils.join("\n", output));
             }
         }
